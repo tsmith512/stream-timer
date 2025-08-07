@@ -1,0 +1,21 @@
+{
+  "name": "stream-timer",
+  "version": "1.0.0",
+  "description": "A tool for uploading videos to Cloudflare Stream",
+  "main": "upload-to-stream.js",
+  "scripts": {
+    "start": "node upload-to-stream.js",
+    "upload": "node upload-to-stream.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.1"
+  },
+  "keywords": [
+    "cloudflare",
+    "stream",
+    "video",
+    "upload"
+  ],
+  "author": "",
+  "license": "MIT"
+}
