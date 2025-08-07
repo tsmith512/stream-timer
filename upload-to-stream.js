@@ -36,10 +36,21 @@ async function pollVideoStatus(videoId, startTime) {
           console.log(`[${currentTime.toISOString()}] Ready to stream: ${currentReadyToStream} (${elapsedTime}s elapsed)`);
         }
         
-        // Stop polling if processing is complete
-        if (currentState === 'ready' || currentState === 'error') {
+        // Report on pctComplete reaching 100
+        const pctComplete = parseFloat(result.result.status.pctComplete);
+        if (pctComplete === 100 && currentState === 'ready') {
           const totalTime = ((currentTime - startTime) / 1000).toFixed(2);
+          console.log(`[${currentTime.toISOString()}] Processing complete: ${pctComplete}% (${totalTime}s elapsed)`);
           console.log(`\n--- Processing complete ---`);
+          console.log(`Final state: ${currentState}`);
+          console.log(`Total processing time: ${totalTime} seconds`);
+          break;
+        }
+        
+        // Stop polling if there's an error
+        if (currentState === 'error') {
+          const totalTime = ((currentTime - startTime) / 1000).toFixed(2);
+          console.log(`\n--- Processing failed ---`);
           console.log(`Final state: ${currentState}`);
           console.log(`Total processing time: ${totalTime} seconds`);
           break;
