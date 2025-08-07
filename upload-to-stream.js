@@ -2,7 +2,10 @@ require('dotenv').config();
 
 const CLOUDFLARE_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
 const CLOUDFLARE_API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
-const VIDEO_URL = 'https://pub-8613b7f94d6146408add8fefb52c52e8.r2.dev/aus-mobile-demo.mp4';
+const DEFAULT_VIDEO_URL = 'https://pub-8613b7f94d6146408add8fefb52c52e8.r2.dev/aus-mobile-demo.mp4';
+
+// Get video URL from command line argument or use default
+const VIDEO_URL = process.argv[2] || DEFAULT_VIDEO_URL;
 
 async function pollVideoStatus(videoId, startTime) {
   let previousState = null;
@@ -74,6 +77,7 @@ async function pollVideoStatus(videoId, startTime) {
 async function uploadVideoToStream() {
   try {
     const uploadStartTime = new Date();
+    console.log(`Uploading video from: ${VIDEO_URL}`);
     console.log(`Upload request started at: ${uploadStartTime.toISOString()}`);
     
     const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/stream/copy`, {
