@@ -21,8 +21,11 @@ if (!fs.existsSync(OUTPUT_DIR)) {
 }
 
 // Create log function that writes to both console and file
-function log(message) {
-  console.log(message);
+function log(...args) {
+  console.log(...args);
+  const message = args.map(arg => 
+    typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+  ).join(' ');
   fs.appendFileSync(LOG_FILE_PATH, message + '\n');
 }
 
