@@ -31,6 +31,14 @@ This project was created to analyze Cloudflare Stream's video processing pipelin
    - Maintains default URL fallback for convenience
    - Enhanced logging to show which URL is being processed
 
+5. **File Logging System**
+   - Added automatic logging of all execution output to timestamped files
+   - Creates `output/` directory automatically if it doesn't exist
+   - Generates unique log files named `stream-timer-YYYY-MM-DDTHH-MM-SS-sssZ.txt`
+   - Custom `log()` function writes to both console and file simultaneously
+   - Handles multiple arguments and object serialization for complete output capture
+   - Fixed bug where multiple arguments to log function weren't being captured in files
+
 ## Usage
 
 ```bash
@@ -63,6 +71,7 @@ node upload-to-stream.js https://example.com/your-video.mp4
   - Total processing time
 - **Flexible Input**: Command line argument support with sensible defaults
 - **Error Handling**: Graceful error handling and continued polling on transient failures
+- **File Logging**: Automatic logging to timestamped files in `output/` directory for historical analysis
 
 ## API Endpoints Used
 
@@ -88,3 +97,11 @@ The tool provides timestamped logs showing:
 - Status transitions with elapsed time
 - When video becomes ready to stream
 - Final processing completion with total time
+
+### Log Files
+
+Each execution creates a timestamped log file in the `output/` directory:
+- File naming: `stream-timer-YYYY-MM-DDTHH-MM-SS-sssZ.txt`
+- Contains identical output to console for permanent record keeping
+- Automatically created directory structure
+- Useful for batch analysis and historical comparison of processing times
