@@ -23,18 +23,42 @@ if (!fs.existsSync(OUTPUT_DIR)) {
 // Create log function that writes to both console and file
 function log(...args) {
   console.log(...args);
-  const message = args.map(arg => 
+  const message = args.map(arg =>
     typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
   ).join(' ');
   fs.appendFileSync(LOG_FILE_PATH, message + '\n');
 }
 
+async function checkHLSManifest(hlsUrl) {
+  try {
+    const response = await fetch(hlsUrl);
+    const contents = [];
+
+    if (response.ok) {
+      const hls = await response.text();
+      if (hls.match('TYPE=AUDIO')) {
+        contents.push('audio');
+      }
+      for (const r of hls.match(/RESOLUTION=\d+x\d+/g)) {
+        contents.push(r.match(/\d+$/)[0]);
+      }
+    }
+
+    return contents.sort();
+  } catch (error) {
+    console.log(error);
+    return [];
+  }
+}
+
 async function pollVideoStatus(videoId, startTime) {
   let previousState = null;
   let previousReadyToStream = null;
-  
+  let previousHLSState = null;
+  let hlsManifestAvailable = false;
+
   log('\n--- Starting status polling ---');
-  
+
   while (true) {
     try {
       const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/stream/${videoId}`, {
@@ -42,28 +66,45 @@ async function pollVideoStatus(videoId, startTime) {
           'Authorization': `Bearer ${CLOUDFLARE_API_TOKEN}`
         }
       });
-      
+
       if (response.ok) {
         const result = await response.json();
         const currentTime = new Date();
         const currentState = result.result.status.state;
         const currentReadyToStream = result.result.readyToStream;
-        
+        let currentHLSContents;
+
+        // Check HLS manifest availability and contents. Assume it exists and fetch. Will error until ready.
+        currentHLSContents = await checkHLSManifest(`https://cloudflarestream.com/${videoId}/manifest/video.m3u8`);
+        if (currentHLSContents.length) {
+          hlsManifestAvailable = true;
+          const HLSContentsText = currentHLSContents.join(' ');
+          const elapsedTime = ((currentTime - startTime) / 1000).toFixed(2);
+
+          if (previousHLSState === null) {
+            log(`[${currentTime.toISOString()}] HLS manifest first available (${elapsedTime}s elapsed). Contains: ${HLSContentsText}`);
+          } else if (previousHLSState !== HLSContentsText) {
+            log(`[${currentTime.toISOString()}] HLS manifest updated (${elapsedTime}s elapsed). Contains: ${HLSContentsText}`);
+          }
+
+          previousHLSState = HLSContentsText;
+        }
+
         // Report state changes
         if (previousState !== null && previousState !== currentState) {
           const elapsedTime = ((currentTime - startTime) / 1000).toFixed(2);
           log(`[${currentTime.toISOString()}] Status changed: ${previousState} → ${currentState} (${elapsedTime}s elapsed)`);
         }
-        
+
         // Report readyToStream changes
         if (previousReadyToStream !== null && previousReadyToStream !== currentReadyToStream && currentReadyToStream === true) {
           const elapsedTime = ((currentTime - startTime) / 1000).toFixed(2);
           log(`[${currentTime.toISOString()}] Ready to stream: ${currentReadyToStream} (${elapsedTime}s elapsed)`);
         }
-        
+
         // Report on pctComplete reaching 100
         const pctComplete = parseFloat(result.result.status.pctComplete);
-        if (pctComplete === 100 && currentState === 'ready') {
+        if (pctComplete === 100 && currentState === 'ready' && hlsManifestAvailable) {
           const totalTime = ((currentTime - startTime) / 1000).toFixed(2);
           log(`[${currentTime.toISOString()}] Processing complete: ${pctComplete}% (${totalTime}s elapsed)`);
           log(`\n--- Processing complete ---`);
@@ -71,7 +112,7 @@ async function pollVideoStatus(videoId, startTime) {
           log(`Total processing time: ${totalTime} seconds`);
           break;
         }
-        
+
         // Stop polling if there's an error
         if (currentState === 'error') {
           const totalTime = ((currentTime - startTime) / 1000).toFixed(2);
@@ -80,13 +121,13 @@ async function pollVideoStatus(videoId, startTime) {
           log(`Total processing time: ${totalTime} seconds`);
           break;
         }
-        
+
         previousState = currentState;
         previousReadyToStream = currentReadyToStream;
       } else {
         console.error('Failed to fetch video status:', await response.text());
       }
-      
+
       // Wait 2 seconds before next poll
       await new Promise(resolve => setTimeout(resolve, 2000));
     } catch (error) {
@@ -101,7 +142,7 @@ async function uploadVideoToStream() {
     const uploadStartTime = new Date();
     log(`Uploading video from: ${VIDEO_URL}`);
     log(`Upload request started at: ${uploadStartTime.toISOString()}`);
-    
+
     const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/stream/copy`, {
       method: 'POST',
       headers: {
@@ -118,7 +159,7 @@ async function uploadVideoToStream() {
     });
 
     const result = await response.json();
-    
+
     if (response.ok) {
       const uploadCompleteTime = new Date();
       log(`Upload request completed at: ${uploadCompleteTime.toISOString()}`);
@@ -126,7 +167,7 @@ async function uploadVideoToStream() {
       log('Video ID:', result.result.uid);
       log('Initial Status:', result.result.status.state);
       log('Preview URL:', `https://watch.cloudflarestream.com/${result.result.uid}`);
-      
+
       // Start polling for status updates
       await pollVideoStatus(result.result.uid, uploadCompleteTime);
     } else {
