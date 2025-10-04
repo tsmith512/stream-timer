@@ -56,10 +56,13 @@ async function pollVideoStatus(videoId, startTime) {
   let previousReadyToStream = null;
   let previousHLSState = null;
   let hlsManifestAvailable = false;
+  let i = 0;
 
   log('\n--- Starting status polling ---');
 
   while (true) {
+    i++;
+
     try {
       const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/stream/${videoId}`, {
         headers: {
@@ -112,6 +115,13 @@ async function pollVideoStatus(videoId, startTime) {
           log(`Total processing time: ${totalTime} seconds`);
           break;
         }
+
+        // Every minute, extra status report
+        if (i % 30 === 0) {
+          const elapsedTime = ((currentTime - startTime) / 1000).toFixed(2);
+          log(`[${currentTime.toISOString()}] Currently ${currentState}: total progress ${pctComplete}%, ${currentReadyToStream ? 'is' : 'not yet'} ready to stream (${elapsedTime}s elapsed)`);
+        }
+
 
         // Stop polling if there's an error
         if (currentState === 'error') {
