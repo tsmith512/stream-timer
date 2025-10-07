@@ -78,7 +78,7 @@ async function pollVideoStatus(videoId, startTime) {
         const result = await response.json();
         const currentTime = new Date();
         const currentState = result.result.status.state;
-        const currentReadyToStream = result.result.readyToStream;
+        const currentReadyToStream = !! result.result.readyToStreamAt?.length; // WIP: Cast it as a bool
         const elapsedTime = ((currentTime - startTime) / 1000).toFixed(2);
         let currentHLSContents;
 
@@ -120,6 +120,9 @@ async function pollVideoStatus(videoId, startTime) {
         // Every minute, extra status report
         if (i % 30 === 0) {
           log(`[${currentTime.toISOString()}] Currently ${currentState}: total progress ${pctComplete}%, ${currentReadyToStream ? 'is' : 'not yet'} ready to stream (${elapsedTime}s elapsed)`);
+
+          // WIP: Dump the API payload directly
+          log(JSON.stringify(result, null, 2));
         }
 
         // Stop polling if there's an error
