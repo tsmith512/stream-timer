@@ -6,9 +6,9 @@ const CLOUDFLARE_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
 const CLOUDFLARE_API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 
 // Default 1080p HD, 15 seconds
-// const DEFAULT_VIDEO_URL = 'https://pub-8613b7f94d6146408add8fefb52c52e8.r2.dev/aus-mobile-demo.mp4';
+const DEFAULT_VIDEO_URL = 'https://pub-8613b7f94d6146408add8fefb52c52e8.r2.dev/aus-mobile-demo.mp4';
 // Default 4K, ~10 minutes (Big Buck Bunny)
-const DEFAULT_VIDEO_URL = 'https://pub-8613b7f94d6146408add8fefb52c52e8.r2.dev/bbb-4k.mp4';
+// const DEFAULT_VIDEO_URL = 'https://pub-8613b7f94d6146408add8fefb52c52e8.r2.dev/bbb-4k.mp4';
 
 // Get video URL from command line argument or use default
 const VIDEO_URL = process.argv[2] || DEFAULT_VIDEO_URL;
@@ -161,7 +161,7 @@ async function uploadVideoToStream() {
         meta: {
           name: 'stream-timer benchmark upload'
         },
-        scheduledDeletion: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()
+        scheduledDeletion: new Date(Date.now() + (31 * 24 * 60 * 60 * 1000)).toISOString()
       })
     });
 
